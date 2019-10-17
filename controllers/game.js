@@ -38,14 +38,24 @@ module.exports = (io) => {
     //starts the game
     client.on("Start Hand", (id, start) => {
       Lobby.findById(id).then(lobby => {
-        // setting random czar and black card
+        lobby.currPlayed = []
         if (start) {
           lobby.czar = lobby.users[Math.floor(Math.random() * lobby.users.length)]._id
           lobby.users.forEach((user, index) => {
             if (user._id != lobby.czar) {
               user.hand = []
               for (let i = 0; i < 8; i++) {
-                users[index].hand.push(lobby.whiteCards.splice(Math.floor(Math.random() * lobby.whiteCards.length), 1)[0])
+                user.hand.push(lobby.whiteCards.splice(Math.floor(Math.random() * lobby.whiteCards.length), 1)[0])
+              }
+            }
+          })
+        } else {
+          lobby.users.forEach((user, index) => {
+            if (user._id === lobby.czar) {
+              if (index < lobby.users.length - 2) {
+                lobby.czar = lobby.users[index + 1]
+              } else {
+                lobby.czar = lobby.users[0]
               }
             }
           })
@@ -53,9 +63,9 @@ module.exports = (io) => {
         do {
           lobby.currBlack = lobby.blackCards.splice(Math.floor(Math.random() * lobby.blackCards.length), 1)[0]
         } while (lobby.currBlack.pick !== 1)
-        lobby.currPlayed = []
+        lobby.markModified("users")
         lobby.save()
-          .then(() => {
+          .then(lobby => {
             if (start) {
               io.to(id).emit("Hand Started", lobby)
             } else {
@@ -89,15 +99,17 @@ module.exports = (io) => {
       Lobby.findById(id)
         .then(lobby => {
           lobby.currPlayed.push({ card, user })
-          console.log(lobby.users)
           lobby.users.forEach(player => {
-            console.log("card should be added")
-            if (player._id === user) {
-              console.log("card added")
+            if (player._id == user.id) {
+              player.hand.forEach(item => {
+                if (item == card) {
+                  player.hand.splice(player.hand.indexOf(item), 1)
+                }
+              })
               player.hand.push(lobby.whiteCards.splice(Math.floor(Math.random() * lobby.whiteCards.length), 1)[0])
-              console.log(player.hand)
             }
           })
+          lobby.markModified("users")
           lobby.save()
             .then(lobby => {
               if (lobby.currPlayed.length === lobby.users.length - 1) {
