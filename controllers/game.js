@@ -6,6 +6,7 @@ module.exports = (io) => {
     client.on("New Game", (owner, lobbyId, whiteCards, blackCards) => {
       Player.findById(owner)
         .then(user => {
+          user.points = 0
           Lobby.create({
             users: [user],
             owner: user._id,
@@ -38,10 +39,18 @@ module.exports = (io) => {
     client.on("Start Game", id => {
       Lobby.findById(id).then(lobby => {
         // setting random czar and black card
-        lobby.czar = lobby.users[Math.floor(Math.random() * lobby.users.length)].id
+        lobby.czar = lobby.users[Math.floor(Math.random() * lobby.users.length)]._id
         do {
           lobby.currBlack = lobby.blackCards.splice(Math.floor(Math.random() * lobby.blackCards.length), 1)[0]
         } while (lobby.currBlack.pick !== 1)
+        lobby.users.forEach(user => {
+          if (user._id != lobby.czar) {
+            user.hand = []
+            for (let i = 0; i < 8; i++) {
+              user.hand.push(lobby.whiteCards.splice(Math.floor(Math.random() * lobby.whiteCards.length), 1)[0])
+            }
+          }
+        })
         lobby.save()
           .then(() => {
             io.to(id).emit("Game Started", lobby)
@@ -56,6 +65,7 @@ module.exports = (io) => {
           client.join(lobby[0]._id)
           Player.findById(userId)
             .then(user => {
+              user.points = 0
               lobby[0].users.push(user)
               lobby[0].save()
                 .then(() => {
@@ -67,13 +77,41 @@ module.exports = (io) => {
     })
 
     //handle user playing card
-    client.on("Play Card", (lobbyId, user) => {
+    client.on("Play Card", (id, user, card) => {
       //add card to played cards, give user a new card, update gamestate
+      Lobby.findById(id)
+        .then(lobby => {
+          lobby.currPlayed.push({ card, user })
+          lobby.save()
+            .then(lobby => {
+              if (lobby.currPlayed.length === lobby.users.length - 1) {
+                io.to(id).emit("Selection", lobby)
+              } else {
+                io.to(id).emit("Update Cards", lobby)
+              }
+            }).catch(err => console.log(err))
+        }).catch(err => console.log(err))
     })
 
     //handle czar picking winner
-    client.on("Pick Card", () => {
+    client.on("Pick Card", (lobbyId, card) => {
       //give winning user a point, set new blackcard, update gamestate
+      Lobby.findById(lobbyId)
+        .then(lobby => {
+          let winner = null
+          lobby.currPlayed.forEach(played => {
+            if (card === played.card) {
+              winner = played.user.id
+            }
+          })
+          lobby.users.forEach(user => {
+            if (user._id === winner) {
+              user.points += 1
+            }
+          })
+          lobby.currPlayed = []
+          io.to(lobbyId).emit("Winning Card", winner)
+        })
     })
   })
 }

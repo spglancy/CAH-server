@@ -6,6 +6,8 @@ const PlayerSchema = new Schema({
   email: String,
   password: String,
   name: String,
+  hand: Array,
+  points: Number
 })
 
 // Salt password
