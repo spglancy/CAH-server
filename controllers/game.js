@@ -36,24 +36,31 @@ module.exports = (io) => {
     })
 
     //starts the game
-    client.on("Start Game", id => {
+    client.on("Start Hand", (id, start) => {
       Lobby.findById(id).then(lobby => {
         // setting random czar and black card
-        lobby.czar = lobby.users[Math.floor(Math.random() * lobby.users.length)]._id
+        if (start) {
+          lobby.czar = lobby.users[Math.floor(Math.random() * lobby.users.length)]._id
+          lobby.users.forEach((user, index) => {
+            if (user._id != lobby.czar) {
+              user.hand = []
+              for (let i = 0; i < 8; i++) {
+                users[index].hand.push(lobby.whiteCards.splice(Math.floor(Math.random() * lobby.whiteCards.length), 1)[0])
+              }
+            }
+          })
+        }
         do {
           lobby.currBlack = lobby.blackCards.splice(Math.floor(Math.random() * lobby.blackCards.length), 1)[0]
         } while (lobby.currBlack.pick !== 1)
-        lobby.users.forEach(user => {
-          if (user._id != lobby.czar) {
-            user.hand = []
-            for (let i = 0; i < 8; i++) {
-              user.hand.push(lobby.whiteCards.splice(Math.floor(Math.random() * lobby.whiteCards.length), 1)[0])
-            }
-          }
-        })
+        lobby.currPlayed = []
         lobby.save()
           .then(() => {
-            io.to(id).emit("Game Started", lobby)
+            if (start) {
+              io.to(id).emit("Hand Started", lobby)
+            } else {
+              io.to(client.id).emit("Hand Started", lobby)
+            }
           })
       })
     })
@@ -82,6 +89,15 @@ module.exports = (io) => {
       Lobby.findById(id)
         .then(lobby => {
           lobby.currPlayed.push({ card, user })
+          console.log(lobby.users)
+          lobby.users.forEach(player => {
+            console.log("card should be added")
+            if (player._id === user) {
+              console.log("card added")
+              player.hand.push(lobby.whiteCards.splice(Math.floor(Math.random() * lobby.whiteCards.length), 1)[0])
+              console.log(player.hand)
+            }
+          })
           lobby.save()
             .then(lobby => {
               if (lobby.currPlayed.length === lobby.users.length - 1) {
@@ -101,7 +117,7 @@ module.exports = (io) => {
           let winner = null
           lobby.currPlayed.forEach(played => {
             if (card === played.card) {
-              winner = played.user.id
+              winner = played
             }
           })
           lobby.users.forEach(user => {
