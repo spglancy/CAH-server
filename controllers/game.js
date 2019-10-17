@@ -4,10 +4,8 @@ module.exports = (io) => {
   io.on("connection", client => {
     //handle lobby creation
     client.on("New Game", (owner, lobbyId, whiteCards, blackCards) => {
-      console.log(owner)
       Player.findById(owner)
         .then(user => {
-          console.log(user)
           Lobby.create({
             users: [user],
             owner: user._id,
@@ -27,6 +25,13 @@ module.exports = (io) => {
                 .catch(err => console.log(err))
             })
         })
+    })
+
+    client.on("Update Players", id => {
+      client.join(id)
+      Lobby.findById(id).then(lobby => {
+        io.to(id).emit("Players Updated", lobby)
+      })
     })
 
     //starts the game
@@ -54,7 +59,7 @@ module.exports = (io) => {
               lobby[0].users.push(user)
               lobby[0].save()
                 .then(() => {
-                  io.to(lobby[0]._id).emit("Joined Lobby", lobby[0]._id)
+                  io.to(lobby[0]._id).emit("Joined Lobby", lobby[0]._id, user)
                 })
             })
         })
