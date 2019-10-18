@@ -38,32 +38,32 @@ module.exports = (io) => {
     //starts the game
     client.on("Start Hand", (id, start) => {
       Lobby.findById(id).then(lobby => {
-        lobby.currPlayed = []
         if (start) {
           lobby.czar = lobby.users[Math.floor(Math.random() * lobby.users.length)]._id
-          lobby.users.forEach((user, index) => {
-            if (user._id != lobby.czar) {
-              user.hand = []
-              for (let i = 0; i < 8; i++) {
-                user.hand.push(lobby.whiteCards.splice(Math.floor(Math.random() * lobby.whiteCards.length), 1)[0])
-              }
+          lobby.users.forEach(user => {
+            user.hand = []
+            for (let i = 0; i < 8; i++) {
+              user.hand.push(lobby.whiteCards.splice(Math.floor(Math.random() * lobby.whiteCards.length), 1)[0])
             }
           })
         } else {
-          lobby.users.forEach((user, index) => {
-            if (user._id === lobby.czar) {
-              if (index < lobby.users.length - 2) {
-                lobby.czar = lobby.users[index + 1]
-              } else {
-                lobby.czar = lobby.users[0]
+          if (lobby.currPlayed.length > 1) {
+            let czarIndex = null
+            lobby.users.forEach((user, index) => {
+              if (user._id == lobby.czar) {
+                czarIndex = index
               }
-            }
-          })
+            })
+            lobby.czar = lobby.users[(czarIndex + 1) % lobby.users.length]._id
+          }
         }
         do {
           lobby.currBlack = lobby.blackCards.splice(Math.floor(Math.random() * lobby.blackCards.length), 1)[0]
         } while (lobby.currBlack.pick !== 1)
+        lobby.currPlayed = []
+        lobby.markModified("currPlayed")
         lobby.markModified("users")
+        lobby.markModified("czar")
         lobby.save()
           .then(lobby => {
             if (start) {
@@ -133,12 +133,16 @@ module.exports = (io) => {
             }
           })
           lobby.users.forEach(user => {
-            if (user._id === winner) {
-              user.points += 1
+            if (user._id == winner.user.id) {
+              user.points = user.points + 1
             }
+            console.log(user)
           })
-          lobby.currPlayed = []
-          io.to(lobbyId).emit("Winning Card", winner)
+          lobby.markModified("users")
+          lobby.save()
+            .then(lobby => {
+              io.to(lobbyId).emit("Winning Card", winner)
+            })
         })
     })
   })
