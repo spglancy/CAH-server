@@ -55,11 +55,12 @@ module.exports = (io) => {
               }
             })
             lobby.czar = lobby.users[(czarIndex + 1) % lobby.users.length]._id
+            do {
+              lobby.currBlack = lobby.blackCards.splice(Math.floor(Math.random() * lobby.blackCards.length), 1)[0]
+            } while (lobby.currBlack.pick !== 1)
           }
         }
-        do {
-          lobby.currBlack = lobby.blackCards.splice(Math.floor(Math.random() * lobby.blackCards.length), 1)[0]
-        } while (lobby.currBlack.pick !== 1)
+
         lobby.currPlayed = []
         lobby.markModified("currPlayed")
         lobby.markModified("users")
