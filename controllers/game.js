@@ -50,7 +50,7 @@ module.exports = (io) => {
             lobby.currBlack = lobby.blackCards.splice(Math.floor(Math.random() * lobby.blackCards.length), 1)[0]
           } while (lobby.currBlack.pick !== 1)
         } else {
-          if (lobby.currPlayed.length > 1) {
+          if (lobby.currPlayed.length > 0) {
             let czarIndex = null
             lobby.users.forEach((user, index) => {
               if (user._id == lobby.czar) {
@@ -62,19 +62,15 @@ module.exports = (io) => {
               lobby.currBlack = lobby.blackCards.splice(Math.floor(Math.random() * lobby.blackCards.length), 1)[0]
             } while (lobby.currBlack.pick !== 1)
           }
+          lobby.currPlayed = []
         }
 
-        lobby.currPlayed = []
         lobby.markModified("currPlayed")
         lobby.markModified("users")
         lobby.markModified("czar")
         lobby.save()
           .then(lobby => {
-            if (start) {
-              io.to(id).emit("Hand Started", lobby)
-            } else {
-              io.to(client.id).emit("Hand Started", lobby)
-            }
+            io.to(id).emit("Hand Started", lobby)
           })
       })
     })
