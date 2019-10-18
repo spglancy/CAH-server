@@ -136,7 +136,6 @@ module.exports = (io) => {
             if (user._id == winner.user.id) {
               user.points = user.points + 1
             }
-            console.log(user)
           })
           lobby.markModified("users")
           lobby.save()
