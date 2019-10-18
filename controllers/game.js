@@ -46,6 +46,9 @@ module.exports = (io) => {
               user.hand.push(lobby.whiteCards.splice(Math.floor(Math.random() * lobby.whiteCards.length), 1)[0])
             }
           })
+          do {
+            lobby.currBlack = lobby.blackCards.splice(Math.floor(Math.random() * lobby.blackCards.length), 1)[0]
+          } while (lobby.currBlack.pick !== 1)
         } else {
           if (lobby.currPlayed.length > 1) {
             let czarIndex = null
