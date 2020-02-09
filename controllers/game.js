@@ -16,7 +16,8 @@ module.exports = (io) => {
             currPlayed: [],
             lobbyId,
             sets: [],
-            czar: null
+            czar: null,
+            bots: []
           })
             .then(lobby => {
               lobby.save()
@@ -59,13 +60,12 @@ module.exports = (io) => {
                 czarIndex = index
               }
             })
-            console.log(lobby.czar)
             lobby.czar = lobby.users[(czarIndex + 1) % lobby.users.length]._id
-            console.log(lobby.czar)
             do {
               lobby.currBlack = lobby.blackCards.splice(Math.floor(Math.random() * lobby.blackCards.length), 1)[0]
             } while (lobby.currBlack.pick !== 1)
           }
+
         }
 
         lobby.markModified("currPlayed")
@@ -73,9 +73,26 @@ module.exports = (io) => {
         lobby.markModified("czar")
         lobby.save()
           .then(lobby => {
-            io.to(id).emit("Hand Started", lobby)
+            if (start) {
+              io.to(id).emit("Hand Started", lobby)
+            } else {
+              client.emit("Hand Started", lobby)
+            }
           })
       })
+    })
+
+    //adds bot to lobby
+    client.on("Add Bot", (botName, lobbyId) => {
+      Lobby.find({ lobbyId })
+        .then(lobby => {
+          lobby.bots.push({ name: botName, hand: [], points: 0 })
+          lobby.markModified("bots")
+          lobby.save()
+          .then(lobby => {
+            io.to(lobby._id).emit("Bot Added")
+          })
+        })
     })
 
     //adds user to lobby

@@ -10,7 +10,8 @@ const LobbySchema = new Schema({
   currPlayed: [],
   lobbyId: String,
   sets: [],
-  czar: String
+  czar: String,
+  bots: []
 })
 
 module.exports = mongoose.model("Lobby", LobbySchema)
