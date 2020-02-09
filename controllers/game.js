@@ -37,6 +37,7 @@ module.exports = (io) => {
 
     //starts the game
     client.on("Start Hand", (id, start) => {
+      // set random czar, initialize user hands if first hand, set the black card
       Lobby.findById(id).then(lobby => {
         if (start) {
           lobby.czar = lobby.users[Math.floor(Math.random() * lobby.users.length)]._id
@@ -51,18 +52,20 @@ module.exports = (io) => {
           } while (lobby.currBlack.pick !== 1)
         } else {
           if (lobby.currPlayed.length > 0) {
+            lobby.currPlayed = []
             let czarIndex = null
             lobby.users.forEach((user, index) => {
               if (user._id == lobby.czar) {
                 czarIndex = index
               }
             })
+            console.log(lobby.czar)
             lobby.czar = lobby.users[(czarIndex + 1) % lobby.users.length]._id
+            console.log(lobby.czar)
             do {
               lobby.currBlack = lobby.blackCards.splice(Math.floor(Math.random() * lobby.blackCards.length), 1)[0]
             } while (lobby.currBlack.pick !== 1)
           }
-          lobby.currPlayed = []
         }
 
         lobby.markModified("currPlayed")
@@ -134,7 +137,7 @@ module.exports = (io) => {
           })
           lobby.users.forEach(user => {
             if (user._id == winner.user.id) {
-              user.points = user.points + 1
+              user.points += 1
             }
           })
           lobby.markModified("users")
